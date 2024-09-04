@@ -1,0 +1,90 @@
+---
+title: "Final_project"
+author: "Kenneth Cruz"
+format: html
+echo: false
+warning: false
+---
+
+```{r}
+#| output: false
+library(gtsummary)
+library(tidyverse)
+library(readxl)
+library(here)
+library(janitor)
+here::here()
+getwd()
+final_project<-read_excel(here::here("R","final-project.xlsx"))
+
+final_projectc<-clean_names(final_project)
+
+final_projectx <-  final_projectc %>% 
+	filter(health_workers_killed != 0)
+```
+```{r}
+#| label: tbl-one
+#| tbl-cap: "Descriptive Statistics of Incident Data in Palestine"
+table_one<- tbl_summary(
+	final_projectx,
+	by=reported_perpetrator_name,
+	include=c(number_of_attacks_on_health_facilities_reporting_damaged,health_workers_killed,health_workers_injured, health_transportation_destroyed),
+	label=list(
+		number_of_attacks_on_health_facilities_reporting_damaged ~ "Health Facilities Damaged",
+		health_workers_killed ~ "Health Workers Killed",
+		health_workers_injured ~ "Health Workers Injured",
+		health_transportation_destroyed ~ "Health Transportation Destroyed"))
+
+table_one
+```
+The number of health facilities damaged by the IDF is `r inline_text(table_one,variable="number_of_attacks_on_health_facilities_reporting_damaged", column = "stat_1")`
+```{r}
+total_hw_killed <-sum(final_projectx$health_workers_killed)
+```
+
+@tbl-one Shows the total number of health workers killed as of August 2024 in Palestine was `r total_hw_killed` workers.
+
+```{r}
+poisson_model <- glm(health_workers_killed ~ reported_perpetrator_name + 
+										 	number_of_attacks_on_health_facilities_reporting_damaged + health_transportation_destroyed,
+										 data = final_projectx, family = poisson)
+```
+```{r}
+#| label: tbl-two
+#| tbl-cap: "Regression Summary of Health Workers Killed vs. Perpetrator, Health Facilities Damaged and Health Transportation Destroyed"
+tbl_regression(
+	poisson_model,
+	exponentiate=TRUE)
+```
+```{r}
+daily_count<-function (n) {
+	countee<-n
+	return(table(final_project$`Health Workers Killed`== n))
+}
+daily_count(2)
+daily_count(3)
+```
+
+
+```{r}
+pdf(file = here::here("R", "histogram1.pdf"))
+
+#| label: fig-hist
+#| fig-cap: "Number of Health Workers Killed Daily"
+histo1<-hist(final_projectx$health_workers_killed, 
+     main = "Histogram of Health Workers Killed", 
+     xlab = "Number Health Workers Killed Daily", 
+     ylab = "Number of Observations", 
+     col = "pink")
+dev.off()
+```
+```{r}
+#| label: fig-hist
+#| fig-cap: "Number of Health Workers Killed Daily"
+histo1<-hist(final_projectx$health_workers_killed, 
+     main = "Histogram of Health Workers Killed", 
+     xlab = "Number Health Workers Killed Daily", 
+     ylab = "Number of Observations", 
+     col = "pink")
+```
+@fig-hist Shows the number of health workers killed daily, and the number of observations for each incident.
